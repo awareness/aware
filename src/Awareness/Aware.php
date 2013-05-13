@@ -56,7 +56,40 @@ abstract class Aware extends Model implements MessageProviderInterface
     */
     public function getChanged()
     {
-        return array_diff($this->attributes, $this->original);
+        // uses array_udiff rather than array_diff in order to support objects that 
+        // cannot be cast to strings
+        return array_udiff($this->attributes, $this->original, function($a, $b) {
+
+            // if one of the values is an object (i.e. DateTime), which can't be cast to a string
+            // we try serializing it instead
+            foreach (array('a', 'b') as $i) {
+                // if it's not an object continue as normal
+                if (!is_object( $$i )) {
+                    continue;
+                }
+
+                // check if it can be cast to a string
+                if (!method_exists( $$i, '__toString' )) {
+                    // no? serialize it
+                    $$i = serialize($$i);
+                }
+            }
+
+            $a = (string) $a;
+            $b = (string) $b;
+
+            if ( $a === $b) {
+                return 0;
+            }
+
+            if ( $a > $b ) {
+                return 1;
+            }
+
+            if ( $a < $b ) {
+                return -1;
+            }
+        });
     }
 
     /**
